@@ -1,16 +1,65 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
-// Dimensões do tabuleiro e tamanho dos navios
+// Dimensões do tabuleiro, navios e matrizes de habilidade
 #define TAM_TABULEIRO 10
 #define TAM_NAVIO 3
+#define TAM_HABILIDADE 5
 
 // Função para inicializar o tabuleiro com água (0)
 void inicializarTabuleiro(int tabuleiro[TAM_TABULEIRO][TAM_TABULEIRO]) {
-    // Itera sobre todas as posições do tabuleiro
     for (int i = 0; i < TAM_TABULEIRO; i++) {
         for (int j = 0; j < TAM_TABULEIRO; j++) {
-            tabuleiro[i][j] = 0; // Define como água
+            tabuleiro[i][j] = 0; // Água
+        }
+    }
+}
+
+// Função para inicializar matriz de habilidade com zeros
+void inicializarHabilidade(int habilidade[TAM_HABILIDADE][TAM_HABILIDADE]) {
+    for (int i = 0; i < TAM_HABILIDADE; i++) {
+        for (int j = 0; j < TAM_HABILIDADE; j++) {
+            habilidade[i][j] = 0; // Não afetado
+        }
+    }
+}
+
+// Função para criar matriz de habilidade Cone (topo na linha 0, base na linha 4)
+void criarHabilidadeCone(int habilidade[TAM_HABILIDADE][TAM_HABILIDADE]) {
+    inicializarHabilidade(habilidade);
+    // Cone: linha 0 tem 1 posição, linha 1 tem 2, linha 2 tem 3, etc.
+    for (int i = 0; i < TAM_HABILIDADE; i++) {
+        int largura = i + 1; // Número de posições afetadas na linha
+        int inicio = (TAM_HABILIDADE - largura) / 2; // Centraliza
+        for (int j = inicio; j < inicio + largura; j++) {
+            habilidade[i][j] = 1; // Marca como afetado
+        }
+    }
+}
+
+// Função para criar matriz de habilidade Cruz (centro em [2][2])
+void criarHabilidadeCruz(int habilidade[TAM_HABILIDADE][TAM_HABILIDADE]) {
+    inicializarHabilidade(habilidade);
+    // Cruz: linha e coluna central
+    int centro = TAM_HABILIDADE / 2; // Índice 2
+    for (int i = 0; i < TAM_HABILIDADE; i++) {
+        habilidade[i][centro] = 1; // Coluna central
+        habilidade[centro][i] = 1; // Linha central
+    }
+}
+
+// Função para criar matriz de habilidade Octaedro (losango, centro em [2][2])
+void criarHabilidadeOctaedro(int habilidade[TAM_HABILIDADE][TAM_HABILIDADE]) {
+    inicializarHabilidade(habilidade);
+    // Octaedro: forma de losango centrada
+    int centro = TAM_HABILIDADE / 2; // Índice 2
+    for (int i = 0; i < TAM_HABILIDADE; i++) {
+        for (int j = 0; j < TAM_HABILIDADE; j++) {
+            // Distância de Manhattan para formar losango
+            if (abs(i - centro) + abs(j - centro) <= centro) {
+                habilidade[i][j] = 1; // Marca como afetado
+            }
         }
     }
 }
@@ -19,42 +68,37 @@ void inicializarTabuleiro(int tabuleiro[TAM_TABULEIRO][TAM_TABULEIRO]) {
 bool validarPosicao(int tabuleiro[TAM_TABULEIRO][TAM_TABULEIRO], int linha, int coluna, 
                    int tipo, int tamanho) {
     // Tipo: 0 (horizontal), 1 (vertical), 2 (diagonal crescente), 3 (diagonal decrescente)
-    
-    // Verifica limites e sobreposição
     if (tipo == 0) { // Horizontal
         if (coluna + tamanho > TAM_TABULEIRO) return false;
         for (int j = coluna; j < coluna + tamanho; j++) {
-            if (tabuleiro[linha][j] != 0) return false; // Verifica sobreposição
+            if (tabuleiro[linha][j] != 0) return false;
         }
     } else if (tipo == 1) { // Vertical
         if (linha + tamanho > TAM_TABULEIRO) return false;
         for (int i = linha; i < linha + tamanho; i++) {
-            if (tabuleiro[i][coluna] != 0) return false; // Verifica sobreposição
+            if (tabuleiro[i][coluna] != 0) return false;
         }
-    } else if (tipo == 2) { // Diagonal crescente (linha e coluna aumentam)
+    } else if (tipo == 2) { // Diagonal crescente
         if (linha + tamanho > TAM_TABULEIRO || coluna + tamanho > TAM_TABULEIRO) return false;
         for (int k = 0; k < tamanho; k++) {
-            if (tabuleiro[linha + k][coluna + k] != 0) return false; // Verifica sobreposição
+            if (tabuleiro[linha + k][coluna + k] != 0) return false;
         }
-    } else if (tipo == 3) { // Diagonal decrescente (linha aumenta, coluna diminui)
+    } else if (tipo == 3) { // Diagonal decrescente
         if (linha + tamanho > TAM_TABULEIRO || coluna < tamanho - 1) return false;
         for (int k = 0; k < tamanho; k++) {
-            if (tabuleiro[linha + k][coluna - k] != 0) return false; // Verifica sobreposição
+            if (tabuleiro[linha + k][coluna - k] != 0) return false;
         }
     }
     return true;
 }
 
 // Função para posicionar um navio no tabuleiro
-bool POSITIONARNavio(int tabuleiro[TAM_TABULEIRO][TAM_TABULEIRO], int linha, int coluna, 
+bool posicionarNavio(int tabuleiro[TAM_TABULEIRO][TAM_TABULEIRO], int linha, int coluna, 
                     int tipo, int tamanho) {
-    // Valida a posição antes de posicionar
     if (!validarPosicao(tabuleiro, linha, coluna, tipo, tamanho)) {
         printf("Posicao invalida para o navio em (%d,%d)\n", linha, coluna);
         return false;
     }
-    
-    // Posiciona o navio
     if (tipo == 0) { // Horizontal
         for (int j = coluna; j < coluna + tamanho; j++) {
             tabuleiro[linha][j] = 3; // Marca navio
@@ -75,55 +119,76 @@ bool POSITIONARNavio(int tabuleiro[TAM_TABULEIRO][TAM_TABULEIRO], int linha, int
     return true;
 }
 
-// Função para exibir o tabuleiro
+// Função para aplicar habilidade ao tabuleiro
+void aplicarHabilidade(int tabuleiro[TAM_TABULEIRO][TAM_TABULEIRO], 
+                      int habilidade[TAM_HABILIDADE][TAM_HABILIDADE], 
+                      int linha_origem, int coluna_origem) {
+    // Calcula deslocamento para centralizar a matriz de habilidade
+    int offset = TAM_HABILIDADE / 2; // Índice 2
+    // Itera sobre a matriz de habilidade
+    for (int i = 0; i < TAM_HABILIDADE; i++) {
+        for (int j = 0; j < TAM_HABILIDADE; j++) {
+            // Calcula posição correspondente no tabuleiro
+            int tab_linha = linha_origem + (i - offset);
+            int tab_coluna = coluna_origem + (j - offset);
+            // Verifica se está dentro dos limites do tabuleiro
+            if (tab_linha >= 0 && tab_linha < TAM_TABULEIRO && 
+                tab_coluna >= 0 && tab_coluna < TAM_TABULEIRO) {
+                // Aplica habilidade apenas se a posição na matriz de habilidade é 1
+                if (habilidade[i][j] == 1) {
+                    tabuleiro[tab_linha][tab_coluna] = 5; // Marca área afetada
+                }
+            }
+        }
+    }
+}
+
+// Função para exibir o tabuleiro com caracteres distintos
 void exibirTabuleiro(int tabuleiro[TAM_TABULEIRO][TAM_TABULEIRO]) {
-    // Imprime cabeçalho com números de colunas
     printf("\n   ");
     for (int j = 0; j < TAM_TABULEIRO; j++) {
         printf("%2d ", j);
     }
     printf("\n");
-    
-    // Imprime linhas do tabuleiro
     for (int i = 0; i < TAM_TABULEIRO; i++) {
-        printf("%2d ", i); // Número da linha
+        printf("%2d ", i);
         for (int j = 0; j < TAM_TABULEIRO; j++) {
-            printf("%2d ", tabuleiro[i][j]);
+            if (tabuleiro[i][j] == 0) printf(" ~ "); // Água
+            else if (tabuleiro[i][j] == 3) printf(" N "); // Navio
+            else if (tabuleiro[i][j] == 5) printf(" * "); // Área afetada
         }
         printf("\n");
     }
 }
 
 int main() {
-    // Declaração do tabuleiro
+    // Declaração do tabuleiro e matrizes de habilidade
     int tabuleiro[TAM_TABULEIRO][TAM_TABULEIRO];
+    int habilidadeCone[TAM_HABILIDADE][TAM_HABILIDADE];
+    int habilidadeCruz[TAM_HABILIDADE][TAM_HABILIDADE];
+    int habilidadeOctaedro[TAM_HABILIDADE][TAM_HABILIDADE];
     
-    // Inicializa o tabuleiro com água
+    // Inicializa o tabuleiro
     inicializarTabuleiro(tabuleiro);
     
-    // Coordenadas fixas para os navios
-    // Navio 1: Horizontal (linha 2, coluna 3)
-    if (POSITIONARNavio(tabuleiro, 2, 3, 0, TAM_NAVIO)) {
-        printf("Navio horizontal posicionado em (2,3)\n");
-    }
+    // Posiciona os navios
+    posicionarNavio(tabuleiro, 2, 3, 0, TAM_NAVIO); // Horizontal
+    posicionarNavio(tabuleiro, 5, 7, 1, TAM_NAVIO); // Vertical
+    posicionarNavio(tabuleiro, 0, 0, 2, TAM_NAVIO); // Diagonal crescente
+    posicionarNavio(tabuleiro, 0, 9, 3, TAM_NAVIO); // Diagonal decrescente
     
-    // Navio 2: Vertical (linha 5, coluna 7)
-    if (POSITIONARNavio(tabuleiro, 5, 7, 1, TAM_NAVIO)) {
-        printf("Navio vertical posicionado em (5,7)\n");
-    }
+    // Cria as matrizes de habilidade
+    criarHabilidadeCone(habilidadeCone);
+    criarHabilidadeCruz(habilidadeCruz);
+    criarHabilidadeOctaedro(habilidadeOctaedro);
     
-    // Navio 3: Diagonal crescente (linha 0, coluna 0)
-    if (POSITIONARNavio(tabuleiro, 0, 0, 2, TAM_NAVIO)) {
-        printf("Navio diagonal crescente posicionado em (0,0)\n");
-    }
+    // Aplica as habilidades no tabuleiro
+    aplicarHabilidade(tabuleiro, habilidadeCone, 7, 2); // Cone centrado em (7,2)
+    aplicarHabilidade(tabuleiro, habilidadeCruz, 4, 4); // Cruz centrada em (4,4)
+    aplicarHabilidade(tabuleiro, habilidadeOctaedro, 8, 8); // Octaedro centrado em (8,8)
     
-    // Navio 4: Diagonal decrescente (linha 0, coluna 9)
-    if (POSITIONARNavio(tabuleiro, 0, 9, 3, TAM_NAVIO)) {
-        printf("Navio diagonal decrescente posicionado em (0,9)\n");
-    }
-    
-    // Exibe o tabuleiro final
-    printf("\nTabuleiro com navios posicionados:\n");
+    // Exibe o tabuleiro com navios e áreas de habilidade
+    printf("\nTabuleiro com navios e areas de efeito das habilidades:\n");
     exibirTabuleiro(tabuleiro);
     
     return 0;
